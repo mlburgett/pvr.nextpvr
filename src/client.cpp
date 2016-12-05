@@ -266,6 +266,15 @@ void ADDON_FreeSettings()
 
 }
 
+ADDON_STATUS ADDON_CreateInstance(int instanceType, const char* instanceID, const void* instanceProps, void* instanceFunctions, void* kodiInstance, void** addonInstance)
+{
+  return ADDON_STATUS_UNKNOWN;
+}
+
+void ADDON_DestroyInstance(int instanceType, const char* instanceID, void* instance)
+{
+}
+
 /***********************************************************
  * PVR Client AddOn specific public library functions
  ***********************************************************/
