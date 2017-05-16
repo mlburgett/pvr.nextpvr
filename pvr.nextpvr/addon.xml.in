@@ -4,10 +4,7 @@
   version="3.0.1"
   name="NextPVR PVR Client"
   provider-name="Graeme Blackley">
-  <requires>
-    <c-pluff version="0.1"/>
-    <import addon="kodi.instance.pvr" version="@ADDON_INSTANCE_VERSION_PVR@"/>
-  </requires>
+  <requires>@ADDON_DEPENDS@</requires>
   <extension
     point="kodi.pvrclient"
     library_@PLATFORM@="@LIBRARY_FILENAME@"/>
