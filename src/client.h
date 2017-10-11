@@ -50,6 +50,7 @@ extern int              g_iPort;
 extern std::string      g_szPin;
 extern bool             g_bRadioEnabled;
 extern bool             g_bUseTimeshift;
+extern int16_t          g_timeShiftBufferSeconds;
 
 extern ADDON::CHelper_libXBMC_addon *XBMC;
 extern CHelper_libXBMC_pvr          *PVR;
