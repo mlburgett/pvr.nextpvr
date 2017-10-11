@@ -253,6 +253,9 @@ bool cPVRClientNextPVR::Connect()
                 if (liveTimeshiftNode != NULL)
                 {
                   m_supportsLiveTimeshift = true;
+
+                  m_tsbSlipSeconds = atoi(settingsDoc.RootElement()->FirstChildElement("SlipSeconds")->FirstChild()->Value());
+                  XBMC->Log(LOG_DEBUG, "time shift buffer in seconds == %d\n", m_tsbSlipSeconds);
                 }
 
                 // load padding defaults
@@ -2027,6 +2030,34 @@ bool cPVRClientNextPVR::CanSeekStream(void)
   return (m_supportsLiveTimeshift && g_bUseTimeshift);
 }
 
+time_t cPVRClientNextPVR::GetBufferTimeStart()
+{
+  if (m_pLiveShiftSource != NULL)
+  {
+    if (m_supportsLiveTimeshift && g_bUseTimeshift)
+    {
+      if (m_tsbStreamStartTime == 0)
+      {
+        m_tsbStreamStartTime = time(NULL);
+      }
+      time_t earliestBufferTime = time(NULL) - m_tsbSlipSeconds;
+      if (m_tsbStreamStartTime < earliestBufferTime)
+        m_tsbStreamStartTime = earliestBufferTime;
+    }
+    else
+    {
+      m_tsbStreamStartTime = time(NULL);
+    }
+    return m_tsbStreamStartTime;
+  }
+  return 0;
+}
+
+time_t cPVRClientNextPVR::GetBufferTimeEnd()
+{
+  return time(NULL);  // Return time now, 
+}
+
 void Tokenize(const string& str, vector<string>& tokens, const string& delimiters = " ")
 {
   string::size_type start_pos = 0;
@@ -2255,3 +2286,34 @@ int cPVRClientNextPVR::DoRequest(const char *resource, CStdString &response)
   
   return resultCode;
 }
+
+time_t cPVRClientNextPVR::GetPlayingTime()
+{
+  if (m_pLiveShiftSource != NULL)
+  {
+    time_t start = GetBufferTimeStart();
+    time_t now = time(NULL);
+    time_t tdiff = now - start;
+    uint64_t end = m_pLiveShiftSource->GetLength();
+    uint64_t pos = m_pLiveShiftSource->GetPosition();
+    uint64_t temp = tdiff * pos;
+    int  viewPos = temp ? (temp / end) : 0;
+    return start + viewPos;
+  }
+  return 0;
+}
+
+bool cPVRClientNextPVR::IsTimeshifting()
+{
+  if (m_pLiveShiftSource != NULL)
+    return true;
+  return false;
+}
+
+bool cPVRClientNextPVR::IsRealTimeStream()
+{
+  if (m_streamingclient->is_valid())
+      return true;
+  return false;
+}
+

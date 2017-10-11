@@ -128,6 +128,11 @@ public:
   long long PositionLiveStream(void);
   bool CanPauseStream(void);
   bool CanSeekStream(void);
+  time_t GetBufferTimeStart(void);
+  time_t GetBufferTimeEnd(void);
+  time_t GetPlayingTime(void);
+  bool IsTimeshifting(void);
+  bool IsRealTimeStream(void);
 
   /* Record stream handling */
   bool OpenRecordedStream(const PVR_RECORDING &recording);
@@ -184,4 +189,6 @@ private:
 
   int                     m_defaultLimit;
   int                     m_defaultShowType;
+  int                     m_tsbSlipSeconds;
+  time_t                  m_tsbStreamStartTime;
 };
