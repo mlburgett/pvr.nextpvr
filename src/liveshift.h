@@ -23,6 +23,7 @@
 #ifndef LiveSlip_H
 #define LiveSlip_H
 
+#include "client.h"
 #include "libXBMC_addon.h"
 #include <string>
 #include "p8-platform/os.h"

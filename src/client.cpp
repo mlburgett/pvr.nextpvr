@@ -687,6 +687,41 @@ PVR_ERROR GetRecordingStreamProperties(const PVR_RECORDING* recording, PVR_NAMED
   return PVR_ERROR_SERVER_ERROR; 
 }
 
+time_t GetBufferTimeStart(void) 
+{
+  if (g_client)
+    return g_client->GetBufferTimeStart();
+  return PVR_ERROR_SERVER_ERROR;
+}
+
+time_t GetBufferTimeEnd(void)
+{
+  if (g_client)
+    return g_client->GetBufferTimeEnd();
+  return PVR_ERROR_SERVER_ERROR;
+}
+
+time_t GetPlayingTime()
+{
+  if (g_client)
+    return g_client->GetPlayingTime();
+  return PVR_ERROR_SERVER_ERROR;
+}
+
+bool IsTimeshifting(void)
+{ 
+  if (g_client)
+    return g_client->IsTimeshifting();
+  return PVR_ERROR_SERVER_ERROR;
+}
+
+bool IsRealTimeStream(void)
+{ 
+  if (g_client)
+    return g_client->IsRealTimeStream();
+  return PVR_ERROR_SERVER_ERROR;
+}
+
 
 /** UNUSED API FUNCTIONS */
 PVR_ERROR MoveChannel(const PVR_CHANNEL &channel) { return PVR_ERROR_NOT_IMPLEMENTED; }
@@ -699,11 +734,6 @@ PVR_ERROR SetRecordingPlayCount(const PVR_RECORDING &recording, int count) { ret
 
 bool SeekTime(double,bool,double*) { return false; }
 void SetSpeed(int) {};
-bool IsTimeshifting(void) { return false; }
-bool IsRealTimeStream(void) { return true; }
-time_t GetPlayingTime() { return 0; }
-time_t GetBufferTimeStart() { return 0; }
-time_t GetBufferTimeEnd() { return 0; }
 PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *) { return PVR_ERROR_NOT_IMPLEMENTED; }
 PVR_ERROR UndeleteRecording(const PVR_RECORDING& recording) { return PVR_ERROR_NOT_IMPLEMENTED; }
 PVR_ERROR DeleteAllRecordingsFromTrash() { return PVR_ERROR_NOT_IMPLEMENTED; }

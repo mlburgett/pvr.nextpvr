@@ -24,6 +24,8 @@
 const int MAX_WINDOW_SIZE = 6;
 const int STARTUP_CACHE_SIZE = 5000000;
 
+using namespace ADDON;
+
 LiveShiftSource::LiveShiftSource(NextPVR::Socket *pSocket)
 {
   m_requestNumber = 0;
@@ -60,10 +62,10 @@ LiveShiftSource::LiveShiftSource(NextPVR::Socket *pSocket)
     char request[48];
     memset(request, 0, sizeof(request));
     snprintf(request, sizeof(request), "Range: bytes=%llu-%llu-%d", blockOffset, (blockOffset+length), m_requestNumber);
-    LOG("sending request: %s\n", request);
+    XBMC->Log(LOG_NOTICE, "sending request: %s\n", request);
     if (m_pSocket->send(request, sizeof(request)) != sizeof(request))
     {
-      LOG("NOT ALL BYTES SENT!");
+      XBMC->Log(LOG_NOTICE, "NOT ALL BYTES SENT!");
     }
 
     m_requestNumber++;
@@ -134,14 +136,14 @@ void LiveShiftSource::LOG(char const *fmt, ... )
 
 unsigned int LiveShiftSource::Read(unsigned char *buffer, unsigned int length)
 {
-  LOG("LiveShiftSource::Read(%d bytes from %llu)\n", length, m_position);
+  XBMC->Log(LOG_NOTICE, "LiveShiftSource::Read(%d bytes from %llu)\n", length, m_position);
 
   int bytesRead = 0;
 
   // can it be read from the cache?
   if (m_startupCache != NULL && ((m_position + length) < m_startCacheBytes))
   {
-    LOG("LiveShiftSource::Read()@exit, returning %d bytes from cache\n", m_startCacheBytes);
+    XBMC->Log(LOG_NOTICE, "LiveShiftSource::Read()@exit, returning %d bytes from cache\n", m_startCacheBytes);
     memcpy(buffer, &m_startupCache[m_position], length);
     m_position += length;
 
@@ -162,7 +164,7 @@ unsigned int LiveShiftSource::Read(unsigned char *buffer, unsigned int length)
     char request[48];
     memset(request, 0, sizeof(request));
     snprintf(request, sizeof(request), "Range: bytes=%llu-%llu-%d", blockOffset, (blockOffset+length), m_requestNumber);
-    LOG("sending request: %s\n", request);
+    XBMC->Log(LOG_NOTICE, "sending request: %s\n", request);
     int sent;
     do 
     {
@@ -174,7 +176,7 @@ unsigned int LiveShiftSource::Read(unsigned char *buffer, unsigned int length)
 #endif
     if (sent != sizeof(request))
     {
-      LOG("NOT ALL BYTES SENT! Only sent %d bytes\n", sent);
+      XBMC->Log(LOG_NOTICE, "NOT ALL BYTES SENT! Only sent %d bytes\n", sent);
       return -1;
     }
 
@@ -184,12 +186,12 @@ unsigned int LiveShiftSource::Read(unsigned char *buffer, unsigned int length)
 
   // read the response, usually the first one
   int read_timeouts = 0;
-  LOG("about to wait for block with offset: %llu\n", m_position);
+  XBMC->Log(LOG_NOTICE, "about to wait for block with offset: %llu\n", m_position);
   while (true)
   {
     if (!m_pSocket->is_valid())
     {
-      LOG("about to call receive(), socket is invalid\n");
+      XBMC->Log(LOG_NOTICE, "about to call receive(), socket is invalid\n");
       return -1;
     }
 
@@ -201,7 +203,7 @@ unsigned int LiveShiftSource::Read(unsigned char *buffer, unsigned int length)
       int responseByteCount = m_pSocket->receive(response, sizeof(response), sizeof(response));
       if (responseByteCount > 0)
       {
-        LOG("got: %s\n", response);
+        XBMC->Log(LOG_NOTICE, "got: %s\n", response);
       }
 #if defined(TARGET_WINDOWS)
       else if (responseByteCount < 0 && errno == WSAEWOULDBLOCK)
@@ -210,7 +212,7 @@ unsigned int LiveShiftSource::Read(unsigned char *buffer, unsigned int length)
 #endif
       {
         usleep(50000);
-        LOG("got: EAGAIN");
+        XBMC->Log(LOG_NOTICE, "got: EAGAIN");
         continue;
       }
       // drop out if response header looks incorrect
@@ -227,22 +229,45 @@ unsigned int LiveShiftSource::Read(unsigned char *buffer, unsigned int length)
       sscanf(response, "%llu:%d %llu %d", &payloadOffset, &payloadSize, &fileSize, &dummy);
       m_lastKnownLength = fileSize;
 
+      char *tempBuffer = new char[32768];
+      char *cacheBuffer = NULL;
+      int cacheLen = 0;
       // read response payload
-      do 
+      if (payloadSize <= length)
       {
-        bytesRead = m_pSocket->receive((char *)buffer, length, payloadSize);
-#if defined(TARGET_WINDOWS)
-      } while (bytesRead < 0 && errno == WSAEWOULDBLOCK);
-#else
-      } while (bytesRead < 0 && errno == EAGAIN);
-#endif
-      // if it's from the start of the file, then cache it
-      if (m_startupCache != NULL && ((payloadOffset + payloadSize) < STARTUP_CACHE_SIZE))
-      {
-        memcpy(&m_startupCache[payloadOffset], buffer, payloadSize);
-        if ((payloadOffset + payloadSize) > m_startCacheBytes)
+        do 
         {
-          m_startCacheBytes = payloadOffset + payloadSize;
+          bytesRead = m_pSocket->receive((char *)buffer, length, payloadSize);
+  #if defined(TARGET_WINDOWS)
+        } while (bytesRead < 0 && errno == WSAEWOULDBLOCK);
+  #else
+        } while (bytesRead < 0 && errno == EAGAIN);
+  #endif
+        cacheBuffer = (char *)buffer;
+        cacheLen = length;
+      }
+      else
+      { // This catches the case for startup, when payloadSize > length
+        do 
+        {
+          bytesRead = m_pSocket->receive((char *)tempBuffer, payloadSize, payloadSize);
+#if defined(TARGET_WINDOWS)
+        } while (bytesRead < 0 && errno == WSAEWOULDBLOCK);
+#else
+        } while (bytesRead < 0 && errno == EAGAIN);
+#endif
+        memcpy(buffer, tempBuffer, length);
+        bytesRead = length;
+        cacheBuffer = tempBuffer;
+        cacheLen = payloadSize;
+      }
+      // if it's from the start of the file, then cache it
+      if (m_startupCache != NULL && ((payloadOffset + cacheLen) < STARTUP_CACHE_SIZE))
+      {
+        memcpy(&m_startupCache[payloadOffset], cacheBuffer, cacheLen);
+        if (payloadOffset + cacheLen > m_startCacheBytes)
+        {
+          m_startCacheBytes = payloadOffset + cacheLen;
         }
       }
 
@@ -251,7 +276,7 @@ unsigned int LiveShiftSource::Read(unsigned char *buffer, unsigned int length)
       {
         // yep, hit - update info
         m_position += payloadSize;
-        LOG("read block:  %llu:%d %llu\n", payloadOffset, payloadSize, fileSize);
+        XBMC->Log(LOG_NOTICE, "read block:  %llu:%d %llu\n", payloadOffset, payloadSize, fileSize);
 
         // read one response
         m_currentWindowSize--;
@@ -260,7 +285,7 @@ unsigned int LiveShiftSource::Read(unsigned char *buffer, unsigned int length)
       else
       {
         // no, miss
-        LOG("read block:  %llu:%d %llu  (not the one we want.... (offset==%llu))\n", payloadOffset, payloadSize, fileSize, m_position);
+        XBMC->Log(LOG_NOTICE, "read block:  %llu:%d %llu  (not the one we want.... (offset==%llu))\n", payloadOffset, payloadSize, fileSize, m_position);
       }
     }
     else
@@ -271,7 +296,7 @@ unsigned int LiveShiftSource::Read(unsigned char *buffer, unsigned int length)
       // is it taking too long?
       if (read_timeouts > 100)
       {
-        LOG("closing socket after 100 timeouts (m_currentWindowSize=%d)\n", m_currentWindowSize);
+        XBMC->Log(LOG_NOTICE, "closing socket after 100 timeouts (m_currentWindowSize=%d)\n", m_currentWindowSize);
         m_currentWindowSize = 0;
         m_pSocket->close();
         return -1;
@@ -280,25 +305,25 @@ unsigned int LiveShiftSource::Read(unsigned char *buffer, unsigned int length)
     }
   }
 
-  LOG("LiveShiftSource::Read()@exit\n");
+  XBMC->Log(LOG_NOTICE, "LiveShiftSource::Read()@exit\n");
   return bytesRead;
 }
 
 long long LiveShiftSource::GetLength()
 {
-  LOG("LiveShiftSource::GetLength() returning %llu\n", m_lastKnownLength);
+  XBMC->Log(LOG_NOTICE, "LiveShiftSource::GetLength() returning %llu\n", m_lastKnownLength);
   return m_lastKnownLength;
 }
 
 long long LiveShiftSource::GetPosition()
 {
-  LOG("LiveShiftSource::GetPosition() returning %llu\n", m_position);
+  XBMC->Log(LOG_NOTICE, "LiveShiftSource::GetPosition() returning %llu\n", m_position);
   return m_position;
 }
 
 void LiveShiftSource::Seek(long long offset)
 {
-  LOG("LiveShiftSource::Seek(%llu)\n", offset);
+  XBMC->Log(LOG_NOTICE, "LiveShiftSource::Seek(%llu)\n", offset);
   m_position = offset;
 
   if ((m_doingStartup && offset != 0) || (m_doingStartup == false))
