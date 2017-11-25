@@ -62,8 +62,6 @@ namespace timeshift {
       return true;
     }
 
-    virtual time_t GetPlayingTime() override;
-
     virtual int64_t Position() const override
     {
       return m_sd.streamPosition.load();  // very approximate
@@ -81,8 +79,9 @@ namespace timeshift {
       return false;
     }
 
-    time_t GetBufferStartTime();
-    time_t GetBufferEndTime();
+    virtual time_t GetPlayingTime() override;
+    virtual time_t GetStartTime() override;
+    virtual time_t GetEndTime() override;
 
   private:
 

@@ -107,7 +107,7 @@ namespace timeshift {
     /**
      * @return the time the buffering started
      */
-    time_t GetStartTime() const
+    virtual time_t GetStartTime()
     {
       return m_startTime;
     }
@@ -120,7 +120,7 @@ namespace timeshift {
     /**
      * @return basically the current time
      */
-    virtual time_t GetEndTime() const
+    virtual time_t GetEndTime()
     {
       return time(nullptr);
     }

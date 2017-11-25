@@ -51,6 +51,15 @@ namespace timeshift {
      * The last known length of the timeshift file on backend
      */
     std::atomic<int64_t> lastKnownLength;
+    
+    std::atomic<int64_t> tsbStart;
+    
+    int iBytesPerSecond;
+    time_t sessionStartTime;
+    time_t tsbStartTime;
+    time_t tsbRollOff;
+    time_t lastBufferTime;
+
     /**
      * The next position a read will access. (in stream, not buffer)
      */

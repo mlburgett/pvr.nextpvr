@@ -46,9 +46,15 @@ TimeshiftBuffer::TimeshiftBuffer()
     m_seek(&m_sd, &m_circularBuffer), m_streamingclient(nullptr), m_tsbStartTime(0)
 {
   XBMC->Log(LOG_DEBUG, "TimeshiftBuffer created!");
-  m_sd.lastKnownLength = 0;
-  m_sd.streamPosition = 0;
+  m_sd.lastKnownLength.store(0);
+  m_sd.tsbStart.store(0);
+  m_sd.streamPosition.store(0);
+  m_sd.iBytesPerSecond = 0;
+  m_sd.sessionStartTime = 0;
+  m_sd.tsbStartTime = 0;
+  m_sd.tsbRollOff = 0;
   m_sd.lastBlockBuffered = 0;
+  m_sd.lastBufferTime = 0;
   m_sd.currentWindowSize = 0;
   m_sd.requestNumber = 0;
   m_sd.requestBlock = 0;
@@ -63,6 +69,7 @@ bool TimeshiftBuffer::Open(const std::string inputUrl)
 {
   XBMC->Log(LOG_DEBUG, "TimeshiftBuffer::Open()");
   Buffer::Open(""); // To set the time stream starts
+  m_sd.tsbStartTime = m_sd.sessionStartTime = Buffer::GetStartTime();
   m_streamingclient = new NextPVR::Socket(NextPVR::af_inet, NextPVR::pf_inet, NextPVR::sock_stream, NextPVR::tcp);
   if (!m_streamingclient->create())
   {
@@ -172,7 +179,13 @@ void TimeshiftBuffer::Close()
   m_sd.requestBlock = 0;
   m_sd.requestNumber = 0;
   m_sd.lastKnownLength.store(0);
+  m_sd.tsbStart.store(0);
+  m_sd.sessionStartTime = 0;
+  m_sd.tsbStartTime = 0;
+  m_sd.tsbRollOff = 0;
+  m_sd.iBytesPerSecond = 0;
   m_sd.lastBlockBuffered = 0;
+  m_sd.lastBufferTime = 0;
   m_sd.streamPosition.store(0);
   m_sd.currentWindowSize = 0;
   m_sd.inputBlockSize = INPUT_READ_LENGTH;
@@ -245,26 +258,27 @@ int64_t TimeshiftBuffer::Seek(int64_t position, int whence)
   return position;
 }
 
-time_t TimeshiftBuffer::GetBufferStartTime()
+time_t TimeshiftBuffer::GetStartTime()
 {
   if (m_active)
   {
-    if (m_tsbStartTime == 0)
+    if (m_sd.tsbStartTime == 0)
     {
-      m_tsbStartTime = Buffer::GetStartTime();
+      m_sd.tsbStartTime = Buffer::GetStartTime();
     }
     time_t now = time(nullptr);
-    int time_diff = now - m_tsbStartTime;
+    int time_diff = now - m_sd.tsbStartTime;
+    XBMC->Log(LOG_DEBUG, "time_diff: %d, m_tsbStartTime: %d", time_diff, m_sd.tsbStartTime);
     if (time_diff > g_timeShiftBufferSeconds)
     {
-      m_tsbStartTime += time_diff;
+      m_sd.tsbStartTime += (time_diff - g_timeShiftBufferSeconds);
     }
-    return m_tsbStartTime;
+    return m_sd.tsbStartTime;
   }
   return 0;
 }
 
-time_t TimeshiftBuffer::GetBufferEndTime()
+time_t TimeshiftBuffer::GetEndTime()
 {
   if (m_active)
     return Buffer::GetEndTime();
@@ -275,13 +289,30 @@ time_t TimeshiftBuffer::GetPlayingTime()
 {
   if (m_active)
   {
-    time_t start = GetBufferStartTime();
+    time_t start = GetStartTime();
     time_t now = time(NULL);
-    time_t tdiff = now - start;
-    uint64_t end = Length();
+    time_t tsbRoll = start - m_sd.sessionStartTime;
+    time_t tdiff = tsbRoll - m_sd.tsbRollOff;  // Correction on this visit.
+    time_t lbtc = now - m_sd.lastBufferTime;
+    XBMC->Log(LOG_DEBUG, "start: %d, lbtc: %d, tdiff: %d", start, lbtc, tdiff);
+    if (lbtc > 0)
+    { // If we're paused, we stop requesting/receiving buffers, so Length() doesn't get updated. Fudge it here.
+      m_sd.lastKnownLength.fetch_add(lbtc * m_sd.iBytesPerSecond);
+      m_sd.lastBufferTime = now;
+    }
+    if (tdiff > 0)
+    {
+      m_sd.tsbStart.fetch_add(tdiff * m_sd.iBytesPerSecond);
+      m_sd.tsbRollOff = tsbRoll;
+    }
+    uint64_t end = m_sd.lastKnownLength.load();
+    int64_t local_tsb_start = m_sd.tsbStart.load();
+    int64_t tsb_len = end - local_tsb_start;
     uint64_t pos = Position();
-    uint64_t temp = tdiff * pos;
-    int  viewPos = temp ? (temp / end) : 0;
+    uint64_t temp = (now - start) * (pos - local_tsb_start);
+    int  viewPos = temp ? (temp / tsb_len) : 0;
+    XBMC->Log(LOG_DEBUG, "tsb_start: %lli, end: %llu, tsb_len: %lli, viewPos: %d B/sec: %d", 
+              local_tsb_start, end, tsb_len, viewPos, m_sd.iBytesPerSecond);
     return start + viewPos;
   }
   return 0;
@@ -379,7 +410,14 @@ uint32_t TimeshiftBuffer::WatchForBlock(byte *buffer, uint64_t *block)
       long long fileSize;
       int dummy;
       sscanf(response, "%llu:%d %llu %d", &payloadOffset, &payloadSize, &fileSize, &dummy);
-      m_sd.lastKnownLength = fileSize;
+      if (m_sd.lastKnownLength.load() != fileSize)
+      {
+        XBMC->Log(LOG_DEBUG, "Adjust lastKnownLength, and reset m_sd.lastBufferTime!");
+        m_sd.lastBufferTime = time(NULL);
+        time_t elapsed = m_sd.lastBufferTime - m_sd.sessionStartTime;
+        m_sd.iBytesPerSecond = elapsed ? fileSize / elapsed : fileSize; // Running estimate of 1 second worth of stream bytes.
+        m_sd.lastKnownLength.store(fileSize);
+      }
       
       // read response payload
       int bytesRead = 0;
