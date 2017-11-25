@@ -23,7 +23,6 @@
 #ifndef CLIENT_H
 #define CLIENT_H
 
-#include "p8-platform/util/StdString.h"
 #include "libXBMC_addon.h"
 #include "libXBMC_pvr.h"
 #include "libKODI_guilib.h"
@@ -56,6 +55,8 @@ extern ADDON::CHelper_libXBMC_addon *XBMC;
 extern CHelper_libXBMC_pvr          *PVR;
 
 extern int              g_iTVServerXBMCBuild;
+
+typedef unsigned char byte;
 
 /*!
  * @brief PVR macros for string exchange

@@ -151,12 +151,12 @@ protected:
   NextPVR::Socket           *m_streamingclient;
 
 private:
-  CStdString GetDayString(int dayMask);
-  std::vector<CStdString> split(const CStdString& s, const CStdString& delim, const bool keep_empty);
+  std::string GetDayString(int dayMask);
+  std::vector<std::string> split(const std::string& s, const std::string& delim, const bool keep_empty);
   bool GetChannel(unsigned int number, PVR_CHANNEL &channeldata);
   bool LoadGenreXML(const std::string &filename);
-  int DoRequest(const char *resource, CStdString &response);
-  CStdString GetChannelIcon(int channelID);
+  int DoRequest(const char *resource, std::string &response);
+  std::string GetChannelIcon(int channelID);
   void Close();
 
   int                     m_iCurrentChannel;

@@ -46,6 +46,7 @@ SET(DEPLIBS ${p8-platform_LIBRARIES}
             ${TINYXML_LIBRARIES})
 if(WIN32)
   list(APPEND DEPLIBS ws2_32)
+  add_definitions(/D_WINSOCK_DEPRECATED_NO_WARNINGS)
 endif()
 
 build_addon(pvr.nextpvr NEXTPVR DEPLIBS)
