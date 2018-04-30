@@ -23,6 +23,16 @@
 
 using namespace timeshift;
 
+PVR_ERROR RecordingBuffer::GetStreamTimes(PVR_STREAM_TIMES *stimes)
+{
+  stimes->startTime = 0;
+  stimes->ptsStart = 0;
+  stimes->ptsBegin = 0;
+  stimes->ptsEnd = ((int64_t )m_Duration) * DVD_TIME_BASE;
+  XBMC->Log(LOG_ERROR, "RecordingBuffer::GetStreamTimes called!");
+  return PVR_ERROR_NO_ERROR;
+}
+
 time_t RecordingBuffer::GetBufferStartTime()
 {
   return Buffer::GetStartTime();

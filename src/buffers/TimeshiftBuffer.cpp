@@ -285,6 +285,15 @@ time_t TimeshiftBuffer::GetEndTime()
   return 0;
 }
 
+PVR_ERROR TimeshiftBuffer::GetStreamTimes(PVR_STREAM_TIMES *stimes)
+{
+  stimes->startTime = 0;
+  stimes->ptsStart = 0;
+  stimes->ptsBegin = ((int64_t )(GetStartTime()-Buffer::GetStartTime())) * DVD_TIME_BASE;
+  stimes->ptsEnd = ((int64_t )(time(nullptr) - Buffer::GetStartTime())) * DVD_TIME_BASE;
+  return PVR_ERROR_NO_ERROR;
+}
+
 time_t TimeshiftBuffer::GetPlayingTime()
 {
   if (m_active)

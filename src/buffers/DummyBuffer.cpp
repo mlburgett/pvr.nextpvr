@@ -23,6 +23,11 @@
 
 using namespace timeshift;
 
+PVR_ERROR DummyBuffer::GetStreamTimes(PVR_STREAM_TIMES *stimes)
+{
+  return Buffer::GetStreamTimes(stimes);
+}
+
 time_t DummyBuffer::GetBufferStartTime()
 {
   return Buffer::GetStartTime();

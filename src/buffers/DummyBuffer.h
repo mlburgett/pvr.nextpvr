@@ -64,6 +64,8 @@ namespace timeshift {
     {
       return XBMC->GetFileLength(m_inputHandle);
     }
+
+    PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *);
     time_t GetBufferStartTime();
     time_t GetBufferEndTime();
   };

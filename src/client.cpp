@@ -570,14 +570,6 @@ long long SeekLiveStream(long long iPosition, int iWhence)
     return g_client->SeekLiveStream(iPosition, iWhence);
 }
 
-long long PositionLiveStream(void)
-{
-  if (!g_client)
-    return -1;
-  else
-    return g_client->PositionLiveStream();
-}
-
 long long LengthLiveStream(void)
 {
   if (!g_client)
@@ -625,14 +617,6 @@ long long SeekRecordedStream(long long iPosition, int iWhence)
     return -1;
   else
     return g_client->SeekRecordedStream(iPosition, iWhence);
-}
-
-long long PositionRecordedStream(void)
-{
-  if (!g_client)
-    return -1;
-  else
-    return g_client->PositionRecordedStream();
 }
 
 long long LengthRecordedStream(void)
@@ -717,9 +701,15 @@ bool IsRealTimeStream(void)
   return PVR_ERROR_SERVER_ERROR;
 }
 
+PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *stimes)
+{
+  if (g_client)
+    return g_client->GetStreamTimes(stimes);
+  return PVR_ERROR_SERVER_ERROR; 
+}
+
 
 /** UNUSED API FUNCTIONS */
-PVR_ERROR MoveChannel(const PVR_CHANNEL &channel) { return PVR_ERROR_NOT_IMPLEMENTED; }
 DemuxPacket* DemuxRead(void) { return NULL; }
 void DemuxAbort(void) {}
 void DemuxReset(void) {}
@@ -729,7 +719,6 @@ PVR_ERROR SetRecordingPlayCount(const PVR_RECORDING &recording, int count) { ret
 
 bool SeekTime(double,bool,double*) { return false; }
 void SetSpeed(int) {};
-PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *) { return PVR_ERROR_NOT_IMPLEMENTED; }
 PVR_ERROR UndeleteRecording(const PVR_RECORDING& recording) { return PVR_ERROR_NOT_IMPLEMENTED; }
 PVR_ERROR DeleteAllRecordingsFromTrash() { return PVR_ERROR_NOT_IMPLEMENTED; }
 PVR_ERROR SetEPGTimeFrame(int) { return PVR_ERROR_NOT_IMPLEMENTED; }

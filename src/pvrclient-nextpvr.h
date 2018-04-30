@@ -87,6 +87,7 @@ public:
   const char* GetConnectionString(void);
   PVR_ERROR GetDriveSpace(long long *iTotal, long long *iUsed);
   PVR_ERROR GetBackendTime(time_t *localTime, int *gmtOffset);
+  PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *stimes);
 
   /* EPG handling */
   PVR_ERROR GetEpg(ADDON_HANDLE handle, const PVR_CHANNEL &channel, time_t iStart = 0, time_t iEnd = 0);
@@ -126,7 +127,6 @@ public:
   PVR_ERROR SignalStatus(PVR_SIGNAL_STATUS &signalStatus);
   long long SeekLiveStream(long long iPosition, int iWhence = SEEK_SET);
   long long LengthLiveStream(void);
-  long long PositionLiveStream(void);
   bool CanPauseStream(void);
   bool CanSeekStream(void);
   time_t GetBufferTimeStart(void);
@@ -141,7 +141,6 @@ public:
   int ReadRecordedStream(unsigned char *pBuffer, unsigned int iBufferSize);
   long long SeekRecordedStream(long long iPosition, int iWhence = SEEK_SET);
   long long LengthRecordedStream(void);
-  long long PositionRecordedStream(void);
 
   /* background connection monitoring */
   void *Process(void);

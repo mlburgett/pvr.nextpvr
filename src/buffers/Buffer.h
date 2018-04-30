@@ -112,6 +112,17 @@ namespace timeshift {
       return m_startTime;
     }
     
+    /**
+     * @return stream times
+     */
+    virtual PVR_ERROR GetStreamTimes(PVR_STREAM_TIMES *stimes)
+    {
+      stimes->startTime = m_startTime;
+      stimes->ptsStart = 0;
+      stimes->ptsBegin = 0;
+      stimes->ptsEnd = time(nullptr) * DVD_TIME_BASE;
+    }
+    
     virtual time_t GetPlayingTime()
     {
       return time(nullptr);
