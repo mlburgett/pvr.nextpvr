@@ -33,12 +33,3 @@ PVR_ERROR RecordingBuffer::GetStreamTimes(PVR_STREAM_TIMES *stimes)
   return PVR_ERROR_NO_ERROR;
 }
 
-time_t RecordingBuffer::GetBufferStartTime()
-{
-  return Buffer::GetStartTime();
-}
-
-time_t RecordingBuffer::GetBufferEndTime()
-{
-  return Buffer::GetEndTime();
-}
